@@ -11,9 +11,35 @@ on:
         description: 'Additional pytest arguments'
         required: false
         default: '-v --tb=short'
+      environment:
+        description: 'Test environment'
+        required: true
+        type: choice
+        options:
+          - pgp_sit
+          - kansas_staging
+          - catalyst_sit
+          - phoenix_staging
+        default: 'pgp_sit'
+      device:
+        description: 'Browser/Device'
+        required: true
+        type: choice
+        options:
+          - chrome
+          - firefox
+          - safari
+          - desktop
+          - mobile
+          - tablet
+        default: 'chrome'
 
 env:
   PYTHON_VERSION: '3.11'
+  PYTHONPATH: ${{ github.workspace }}
+  PYTHONWARNINGS: ignore
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'pgp_sit' }}
+  DEVICE: ${{ github.event.inputs.device || 'chrome' }}
 
 jobs:
   ui-tests:
@@ -85,6 +111,8 @@ jobs:
           total-tests: ${{ steps.run-tests.outputs.total-tests }}
           passed-tests: ${{ steps.run-tests.outputs.passed-tests }}
           failed-tests: ${{ steps.run-tests.outputs.failed-tests }}
+          environment: ${{ env.ENVIRONMENT }}
+          device: ${{ env.DEVICE }}
 
       - name: Fail job if tests failed
         if: steps.run-tests.outputs.test-result == 'failure'
@@ -99,15 +127,18 @@ jobs:
     steps:
       - name: Test Summary
         run: |
-          echo "## UI Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 UI Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Status | Result |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Tests | ${{ needs.ui-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Duration | ${{ github.event.head_commit.timestamp }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ needs.ui-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.inputs.environment || 'pgp_sit' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Device | ${{ github.event.inputs.device || 'chrome' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test File | ${{ github.event.inputs.test-file || 'tests/ui/registration/test_registration_stability.py' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run ID | ${{ github.run_id }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📁 Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- [Test Videos](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Screenshots](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Test Logs](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [HTML Report](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📹 [Test Videos](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📸 [Screenshots](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 [Test Logs](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 [HTML Report](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

@@ -31,6 +31,12 @@ inputs:
     description: 'Number of failed tests'
     required: false
     default: '0'
+  environment:
+    description: 'Test environment'
+    required: false
+  device:
+    description: 'Test device/browser'
+    required: false
 
 runs:
   using: 'composite'
@@ -56,8 +62,17 @@ runs:
           {\"name\": \"Repository\", \"value\": \"${{ github.repository }}\"},
           {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\"},
           {\"name\": \"Commit\", \"value\": \"${{ github.sha }}\"},
-          {\"name\": \"Actor\", \"value\": \"${{ github.actor }}\"},
-          {\"name\": \"Total Tests\", \"value\": \"${{ inputs.total-tests }}\"},
+          {\"name\": \"Actor\", \"value\": \"${{ github.actor }}\"},"
+        
+        if [ -n "${{ inputs.environment }}" ]; then
+          FACTS="$FACTS{\"name\": \"Environment\", \"value\": \"${{ inputs.environment }}\"},"
+        fi
+        
+        if [ -n "${{ inputs.device }}" ]; then
+          FACTS="$FACTS{\"name\": \"Device\", \"value\": \"${{ inputs.device }}\"},"
+        fi
+        
+        FACTS="$FACTS{\"name\": \"Total Tests\", \"value\": \"${{ inputs.total-tests }}\"},
           {\"name\": \"Passed\", \"value\": \"${{ inputs.passed-tests }}\"},
           {\"name\": \"Failed\", \"value\": \"${{ inputs.failed-tests }}\"}
         ]"

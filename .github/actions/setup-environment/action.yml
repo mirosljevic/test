@@ -57,7 +57,9 @@ runs:
     - name: Install Playwright browsers
       shell: bash
       if: steps.playwright-cache.outputs.cache-hit != 'true'
-      run: playwright install --with-deps
+      run: |
+        echo "Installing Playwright browsers..."
+        playwright install chromium firefox webkit --with-deps
 
     - name: Install Playwright system dependencies
       shell: bash
