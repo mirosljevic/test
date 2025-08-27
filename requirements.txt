@@ -1,0 +1,12 @@
+requests
+pytest
+pytest-playwright
+pytest-md-report
+pytest-xdist
+pytest-html
+pyjwt
+bs4
+faker
+pymongo
+cryptography
+psycopg2-binary

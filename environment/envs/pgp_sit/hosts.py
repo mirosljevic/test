@@ -1,0 +1,12 @@
+gateway_web = "https://gateway-web.pds-pgp-sit.pollard.tech"
+cc = "https://cc.pds-pgp-sit.int.pollard.tech"
+cr = "https://cr-control-room.pds-pgp-sit.int.pollard.tech"
+idp_player = "https://idp-player.pds-pgp-sit.int.pollard.tech"
+idp_admin = "https://idp.pds-pgp-sit.int.pollard.tech"
+payment_vault = "https://paymentmethod-vault.pds-pgp-sit.pollard.tech"
+mkodo = "https://gateway.us-east.mkodo-stage.net"
+exponea = "https://exponea.pds-pgp-sit.pollard.tech"
+
+gameweb = "https://ks-pgp-sit.na.pollard.tech"
+backoffice = "https://backoffice.pds-pgp-sit.int.pollard.tech/"
+control_room = "https://control-room.pds-pgp-sit.int.pollard.tech/"

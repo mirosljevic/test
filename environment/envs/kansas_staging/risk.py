@@ -1,0 +1,3 @@
+max_login_attempts_before_offer_password_reset = 3
+max_login_attempts_before_temp_block = 5
+max_login_attempts_before_block = 8

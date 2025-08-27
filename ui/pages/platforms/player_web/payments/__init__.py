@@ -1,0 +1,6 @@
+from .payment_methods_page import PaymentMethodsPage
+from .select_payment_method_page import SelectPaymentMethodPage
+from .credit_card_page import CreditCardPage
+from .bank_account import BankAccountPage
+from .add_funds_page import AddFundsPage
+from .transaction_history_page import TransactionHistoryPage

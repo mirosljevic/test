@@ -1,0 +1,12 @@
+api = "https://api-pex1.dev-ext.eu-central-1.betware.com"
+gateway_web = "https://gateway-web-pex1.dev-ext.eu-central-1.betware.com"
+cc = "https://cc-pex1.dev-ext.eu-central-1.betware.com"
+idp_player = "https://idp-player-pex1.dev-ext.eu-central-1.betware.com"
+idp_admin = "https://idp-pex1.dev-ext.eu-central-1.betware.com"
+payment_vault = "https://paymentmethod-vault-pex1.dev-ext.eu-central-1.betware.com"
+keycloak = "https://keycloak-pex1.dev-ext.eu-central-1.betware.com"
+exponea = "https://exponea-pex1.dev-ext.eu-central-1.betware.com"
+mailhog = "https://mailhog-pex1.dev.eu-central-1.betware.com"
+
+gameweb = "https://web-pex1.dev-ext.eu-central-1.betware.com/"
+backoffice = "https://backoffice-pex1.dev-ext.eu-central-1.betware.com/"

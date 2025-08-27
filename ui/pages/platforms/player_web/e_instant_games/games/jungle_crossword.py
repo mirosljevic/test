@@ -1,0 +1,2 @@
+class JungleCrossword:
+    pass
