@@ -1,10 +1,6 @@
 name: UI Tests
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
       test-file:
@@ -111,7 +107,7 @@ jobs:
           echo "| Duration | ${{ github.event.head_commit.timestamp }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📁 Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- 📹 [Test Videos](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          echo "- 📸 [Screenshots](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          echo "- 📋 [Test Logs](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          echo "- 📊 [HTML Report](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Test Videos](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Screenshots](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Test Logs](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [HTML Report](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

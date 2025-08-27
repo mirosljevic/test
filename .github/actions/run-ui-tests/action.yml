@@ -37,6 +37,7 @@ runs:
       run: |
         export PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright
         echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> $GITHUB_ENV
+        echo "PWDEBUG=0" >> $GITHUB_ENV
 
     - name: Run UI Tests
       id: run-tests
@@ -48,14 +49,13 @@ runs:
         echo "📁 Test file: ${{ inputs.test-file }}"
         echo "🔧 Pytest args: ${{ inputs.pytest-args }}"
         
+        # Configure Playwright to save videos and screenshots
+        export PLAYWRIGHT_VIDEO_DIR=test-results/videos
+        export PLAYWRIGHT_SCREENSHOT_DIR=test-results/screenshots
+        
         # Run tests and capture output
         pytest ${{ inputs.test-file }} ${{ inputs.pytest-args }} \
-          --html=test-results/report.html \
-          --self-contained-html \
-          --video=on \
-          --screenshot=on \
-          --video-dir=test-results/videos \
-          --screenshot-dir=test-results/screenshots 2>&1 | tee test-results/logs/test-execution.log
+          2>&1 | tee test-results/logs/test-execution.log
         
         TEST_EXIT_CODE=$?
         
