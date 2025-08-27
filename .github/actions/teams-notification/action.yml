@@ -1,0 +1,118 @@
+name: 'Send Teams Notification'
+description: 'Send test results notification to Microsoft Teams'
+inputs:
+  webhook-url:
+    description: 'Teams webhook URL'
+    required: true
+  test-result:
+    description: 'Test execution result'
+    required: true
+  test-summary:
+    description: 'Test execution summary'
+    required: true
+  build-url:
+    description: 'GitHub Actions build URL'
+    required: true
+  video-url:
+    description: 'Video artifacts URL'
+    required: false
+  logs-url:
+    description: 'Logs artifacts URL'
+    required: false
+  total-tests:
+    description: 'Total number of tests'
+    required: false
+    default: '0'
+  passed-tests:
+    description: 'Number of passed tests'
+    required: false
+    default: '0'
+  failed-tests:
+    description: 'Number of failed tests'
+    required: false
+    default: '0'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare Teams message
+      shell: bash
+      id: message
+      run: |
+        # Determine color based on test result
+        if [ "${{ inputs.test-result }}" = "success" ]; then
+          COLOR="Good"
+          ICON="✅"
+        else
+          COLOR="Attention"
+          ICON="❌"
+        fi
+        
+        # Get current timestamp
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        # Build facts array
+        FACTS="[
+          {\"name\": \"Repository\", \"value\": \"${{ github.repository }}\"},
+          {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\"},
+          {\"name\": \"Commit\", \"value\": \"${{ github.sha }}\"},
+          {\"name\": \"Actor\", \"value\": \"${{ github.actor }}\"},
+          {\"name\": \"Total Tests\", \"value\": \"${{ inputs.total-tests }}\"},
+          {\"name\": \"Passed\", \"value\": \"${{ inputs.passed-tests }}\"},
+          {\"name\": \"Failed\", \"value\": \"${{ inputs.failed-tests }}\"}
+        ]"
+        
+        # Build actions array
+        ACTIONS="[
+          {
+            \"@type\": \"OpenUri\",
+            \"name\": \"View Build\",
+            \"targets\": [{\"os\": \"default\", \"uri\": \"${{ inputs.build-url }}\"}]
+          }"
+        
+        if [ -n "${{ inputs.video-url }}" ]; then
+          ACTIONS="$ACTIONS,{
+            \"@type\": \"OpenUri\",
+            \"name\": \"View Videos\",
+            \"targets\": [{\"os\": \"default\", \"uri\": \"${{ inputs.video-url }}\"}]
+          }"
+        fi
+        
+        if [ -n "${{ inputs.logs-url }}" ]; then
+          ACTIONS="$ACTIONS,{
+            \"@type\": \"OpenUri\",
+            \"name\": \"View Logs\",
+            \"targets\": [{\"os\": \"default\", \"uri\": \"${{ inputs.logs-url }}\"}]
+          }"
+        fi
+        
+        ACTIONS="$ACTIONS]"
+        
+        # Create the complete message
+        MESSAGE="{
+          \"@type\": \"MessageCard\",
+          \"@context\": \"https://schema.org/extensions\",
+          \"summary\": \"$ICON UI Test Results\",
+          \"themeColor\": \"$COLOR\",
+          \"sections\": [
+            {
+              \"activityTitle\": \"$ICON UI Test Execution Results\",
+              \"activitySubtitle\": \"${{ inputs.test-summary }}\",
+              \"activityImage\": \"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\",
+              \"facts\": $FACTS,
+              \"text\": \"Test execution completed on \`$TIMESTAMP\`\"
+            }
+          ],
+          \"potentialAction\": $ACTIONS
+        }"
+        
+        echo "message<<EOF" >> $GITHUB_OUTPUT
+        echo "$MESSAGE" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Send Teams notification
+      shell: bash
+      run: |
+        curl -H "Content-Type: application/json" \
+             -d '${{ steps.message.outputs.message }}' \
+             ${{ inputs.webhook-url }}

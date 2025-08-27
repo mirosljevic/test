@@ -1,0 +1,87 @@
+name: 'Run UI Tests'
+description: 'Execute UI tests with video recording and logging'
+inputs:
+  test-file:
+    description: 'Test file to run'
+    required: false
+    default: 'tests/ui/registration/test_registration_stability.py'
+  pytest-args:
+    description: 'Additional pytest arguments'
+    required: false
+    default: '-v --tb=short'
+  video-retention-days:
+    description: 'Days to retain video artifacts'
+    required: false
+    default: '7'
+
+outputs:
+  test-result:
+    description: 'Test execution result (success/failure)'
+    value: ${{ steps.run-tests.outputs.result }}
+  test-summary:
+    description: 'Test execution summary'
+    value: ${{ steps.run-tests.outputs.summary }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create test results directory
+      shell: bash
+      run: |
+        mkdir -p test-results/videos
+        mkdir -p test-results/screenshots
+        mkdir -p test-results/logs
+
+    - name: Configure Playwright for CI
+      shell: bash
+      run: |
+        export PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright
+        echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> $GITHUB_ENV
+
+    - name: Run UI Tests
+      id: run-tests
+      shell: bash
+      run: |
+        set +e
+        
+        echo "🧪 Running UI tests..."
+        echo "📁 Test file: ${{ inputs.test-file }}"
+        echo "🔧 Pytest args: ${{ inputs.pytest-args }}"
+        
+        # Run tests and capture output
+        pytest ${{ inputs.test-file }} ${{ inputs.pytest-args }} \
+          --html=test-results/report.html \
+          --self-contained-html \
+          --video=on \
+          --screenshot=on \
+          --video-dir=test-results/videos \
+          --screenshot-dir=test-results/screenshots 2>&1 | tee test-results/logs/test-execution.log
+        
+        TEST_EXIT_CODE=$?
+        
+        # Generate summary
+        if [ $TEST_EXIT_CODE -eq 0 ]; then
+          echo "result=success" >> $GITHUB_OUTPUT
+          echo "summary=✅ All tests passed successfully" >> $GITHUB_OUTPUT
+        else
+          echo "result=failure" >> $GITHUB_OUTPUT
+          echo "summary=❌ Some tests failed (exit code: $TEST_EXIT_CODE)" >> $GITHUB_OUTPUT
+        fi
+        
+        # Count test results
+        TOTAL_TESTS=$(grep -o "collected [0-9]\+ item" test-results/logs/test-execution.log | grep -o "[0-9]\+" || echo "0")
+        PASSED_TESTS=$(grep -o "[0-9]\+ passed" test-results/logs/test-execution.log | grep -o "[0-9]\+" || echo "0")
+        FAILED_TESTS=$(grep -o "[0-9]\+ failed" test-results/logs/test-execution.log | grep -o "[0-9]\+" || echo "0")
+        
+        echo "total-tests=$TOTAL_TESTS" >> $GITHUB_OUTPUT
+        echo "passed-tests=$PASSED_TESTS" >> $GITHUB_OUTPUT
+        echo "failed-tests=$FAILED_TESTS" >> $GITHUB_OUTPUT
+        
+        exit $TEST_EXIT_CODE
+
+    - name: List generated files
+      shell: bash
+      if: always()
+      run: |
+        echo "📂 Generated test artifacts:"
+        find test-results -type f -exec ls -la {} \;

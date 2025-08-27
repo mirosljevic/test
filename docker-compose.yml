@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  pytest-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pytest-ui-tests
+    volumes:
+      # Mount test results to host for easy access
+      - ./test-results:/app/test-results
+      # Mount source code for development (optional)
+      - ./tests:/app/tests
+      - ./actors:/app/actors
+      - ./api:/app/api
+      - ./ui:/app/ui
+      - ./models:/app/models
+      - ./utils:/app/utils
+      - ./environment:/app/environment
+      - ./data_factory:/app/data_factory
+    environment:
+      # Add any environment variables your tests need
+      - PYTHONPATH=/app
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      # Add your test environment variables here
+      # - TEST_ENV=staging
+      # - BASE_URL=https://your-test-site.com
+    # If your tests need network access to external services
+    network_mode: "host"
+    # Or use custom network if needed
+    # networks:
+    #   - test-network
+    command: pytest tests/ui/registration/test_registration_stability.py -v --tb=short
+
+# Uncomment if you need custom network
+# networks:
+#   test-network:
+#     driver: bridge

@@ -1,0 +1,118 @@
+name: UI Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      test-file:
+        description: 'Test file to run'
+        required: false
+        default: 'tests/ui/registration/test_registration_stability.py'
+      pytest-args:
+        description: 'Additional pytest arguments'
+        required: false
+        default: '-v --tb=short'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  ui-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup test environment
+        uses: ./.github/actions/setup-environment
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-key-suffix: ${{ github.run_id }}
+
+      - name: 🧪 Run UI tests
+        id: run-tests
+        uses: ./.github/actions/run-ui-tests
+        with:
+          test-file: ${{ github.event.inputs.test-file || 'tests/ui/registration/test_registration_stability.py' }}
+          pytest-args: ${{ github.event.inputs.pytest-args || '-v --tb=short' }}
+        continue-on-error: true
+
+      - name: 📹 Upload test videos
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-videos-${{ github.run_number }}
+          path: test-results/videos/
+          retention-days: 7
+
+      - name: 📸 Upload screenshots
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-screenshots-${{ github.run_number }}
+          path: test-results/screenshots/
+          retention-days: 7
+
+      - name: 📋 Upload test logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-logs-${{ github.run_number }}
+          path: test-results/logs/
+          retention-days: 14
+
+      - name: 📊 Upload test report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-report-${{ github.run_number }}
+          path: test-results/report.html
+          retention-days: 14
+
+      - name: 📢 Send Teams notification
+        uses: ./.github/actions/teams-notification
+        if: always()
+        with:
+          webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          test-result: ${{ steps.run-tests.outputs.test-result }}
+          test-summary: ${{ steps.run-tests.outputs.test-summary }}
+          build-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          video-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          logs-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          total-tests: ${{ steps.run-tests.outputs.total-tests }}
+          passed-tests: ${{ steps.run-tests.outputs.passed-tests }}
+          failed-tests: ${{ steps.run-tests.outputs.failed-tests }}
+
+      - name: ❌ Fail job if tests failed
+        if: steps.run-tests.outputs.test-result == 'failure'
+        run: |
+          echo "Tests failed!"
+          exit 1
+
+  # Optional: Add a summary job for multiple test files
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: ui-tests
+    if: always()
+    steps:
+      - name: 📊 Test Summary
+        run: |
+          echo "## 🧪 UI Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ needs.ui-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Duration | ${{ github.event.head_commit.timestamp }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- 📹 [Test Videos](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📸 [Screenshots](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 [Test Logs](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 [HTML Report](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

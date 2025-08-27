@@ -23,7 +23,26 @@ A comprehensive multi-platform test automation framework supporting web, mobile,
 - **Email Testing**: Automated email verification and testing
 - **Database Integration**: PostgreSQL and MongoDB support
 - **CI/CD Ready**: Jenkins integration and containerized execution
+- **GitHub Actions Integration**: Automated UI testing with video recording and Teams notifications
 - **Comprehensive Reporting**: HTML, JSON, and real-time reporting
+
+## 🔄 CI/CD Integration
+
+### GitHub Actions Workflow
+This project includes a comprehensive GitHub Actions workflow for automated UI testing:
+
+- **Automated Testing**: Triggered on push/PR and scheduled daily
+- **Video Recording**: Complete test execution videos
+- **Teams Notifications**: Real-time status updates with links to artifacts
+- **Caching**: Optimized with pip and Playwright browser caching
+- **Artifacts**: Videos, screenshots, logs, and HTML reports
+
+#### Quick Setup
+1. Add `TEAMS_WEBHOOK_URL` to repository secrets
+2. Push to main/develop branch to trigger tests
+3. Monitor results in Teams and GitHub Actions
+
+For detailed setup instructions, see [Workflow README](.github/workflows/README.md).
 
 ## 🚀 Quick Start
 

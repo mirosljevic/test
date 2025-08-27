@@ -1,0 +1,61 @@
+name: 'Setup Test Environment'
+description: 'Setup Python, install dependencies, and configure Playwright'
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+  cache-key-suffix:
+    description: 'Additional suffix for cache key'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('**/requirements.txt') }}-${{ inputs.cache-key-suffix }}
+        restore-keys: |
+          pip-${{ runner.os }}-${{ inputs.python-version }}-
+          pip-${{ runner.os }}-
+
+    - name: Install Python dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Get Playwright version
+      shell: bash
+      id: playwright-version
+      run: |
+        PLAYWRIGHT_VERSION=$(python -c "import playwright; print(playwright.__version__)")
+        echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v3
+      id: playwright-cache
+      with:
+        path: |
+          ~/.cache/ms-playwright
+          ~/Library/Caches/ms-playwright
+          %USERPROFILE%\AppData\Local\ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+    - name: Install Playwright browsers
+      shell: bash
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      run: playwright install --with-deps
+
+    - name: Install Playwright system dependencies
+      shell: bash
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      run: playwright install-deps
