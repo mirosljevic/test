@@ -37,6 +37,9 @@ inputs:
   device:
     description: 'Test device/browser'
     required: false
+  scenario:
+    description: 'Test scenario'
+    required: false
 
 runs:
   using: 'composite'
@@ -70,6 +73,10 @@ runs:
         
         if [ -n "${{ inputs.device }}" ]; then
           FACTS="$FACTS{\"name\": \"Device\", \"value\": \"${{ inputs.device }}\"},"
+        fi
+        
+        if [ -n "${{ inputs.scenario }}" ]; then
+          FACTS="$FACTS{\"name\": \"Scenario\", \"value\": \"${{ inputs.scenario }}\"},"
         fi
         
         FACTS="$FACTS{\"name\": \"Total Tests\", \"value\": \"${{ inputs.total-tests }}\"},

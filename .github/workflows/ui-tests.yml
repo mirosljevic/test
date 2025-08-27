@@ -33,6 +33,21 @@ on:
           - mobile
           - tablet
         default: 'chrome'
+      scenario:
+        description: 'Test scenario'
+        required: true
+        type: choice
+        options:
+          - all
+          - bonus
+          - dgs
+          - instants
+          - deposits
+          - claims
+          - withdrawals
+          - registration
+          - risk
+        default: 'all'
 
 env:
   PYTHON_VERSION: '3.11'
@@ -40,6 +55,7 @@ env:
   PYTHONWARNINGS: ignore
   ENVIRONMENT: ${{ github.event.inputs.environment || 'pgp_sit' }}
   DEVICE: ${{ github.event.inputs.device || 'chrome' }}
+  SCENARIO: ${{ github.event.inputs.scenario || 'all' }}
 
 jobs:
   ui-tests:
@@ -64,6 +80,7 @@ jobs:
         with:
           test-file: ${{ github.event.inputs.test-file || 'tests/ui/registration/test_registration_stability.py' }}
           pytest-args: ${{ github.event.inputs.pytest-args || '-v --tb=short' }}
+          scenario: ${{ github.event.inputs.scenario || 'all' }}
         continue-on-error: true
 
       - name: Upload test videos
@@ -113,6 +130,7 @@ jobs:
           failed-tests: ${{ steps.run-tests.outputs.failed-tests }}
           environment: ${{ env.ENVIRONMENT }}
           device: ${{ env.DEVICE }}
+          scenario: ${{ env.SCENARIO }}
 
       - name: Fail job if tests failed
         if: steps.run-tests.outputs.test-result == 'failure'
@@ -134,10 +152,10 @@ jobs:
           echo "| Status | ${{ needs.ui-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | ${{ github.event.inputs.environment || 'pgp_sit' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Device | ${{ github.event.inputs.device || 'chrome' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Scenario | ${{ github.event.inputs.scenario || 'all' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Test File | ${{ github.event.inputs.test-file || 'tests/ui/registration/test_registration_stability.py' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Run ID | ${{ github.run_id }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📁 Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- 📹 [Test Videos](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
           echo "- 📸 [Screenshots](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
           echo "- 📋 [Test Logs](../../actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

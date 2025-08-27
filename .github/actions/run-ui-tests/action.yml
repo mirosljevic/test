@@ -9,6 +9,10 @@ inputs:
     description: 'Additional pytest arguments'
     required: false
     default: '-v --tb=short'
+  scenario:
+    description: 'Test scenario to run'
+    required: false
+    default: 'all'
   video-retention-days:
     description: 'Days to retain video artifacts'
     required: false
@@ -50,19 +54,38 @@ runs:
         echo "🧪 Running UI tests..."
         echo "📁 Test file: ${{ inputs.test-file }}"
         echo "🔧 Pytest args: ${{ inputs.pytest-args }}"
-        echo "🌍 Environment: $ENVIRONMENT"
+        echo "� Scenario: ${{ inputs.scenario }}"
+        echo "�🌍 Environment: $ENVIRONMENT"
         echo "📱 Device: $DEVICE"
         echo "🐍 Python path: $PYTHONPATH"
+        
+        # Build pytest command based on scenario
+        if [ "${{ inputs.scenario }}" = "all" ]; then
+          # Run initial command: pytest -m stability tests/
+          PYTEST_COMMAND="pytest -m stability tests/ ${{ inputs.pytest-args }}"
+          echo "📋 Running all stability tests"
+        else
+          # Run with combined markers: pytest -m "stability and {scenario}" tests/
+          PYTEST_COMMAND="pytest -m \"stability and ${{ inputs.scenario }}\" tests/ ${{ inputs.pytest-args }}"
+          echo "📋 Running stability tests for scenario: ${{ inputs.scenario }}"
+        fi
+        
+        echo "🚀 Command: $PYTEST_COMMAND"
         
         # Configure Playwright to save videos and screenshots
         export PLAYWRIGHT_VIDEO_DIR=test-results/videos
         export PLAYWRIGHT_SCREENSHOT_DIR=test-results/screenshots
         
         # Run tests and capture output
-        pytest ${{ inputs.test-file }} ${{ inputs.pytest-args }} \
-          2>&1 | tee test-results/logs/test-execution.log
+        $PYTEST_COMMAND 2>&1 | tee test-results/logs/test-execution.log
         
         TEST_EXIT_CODE=$?
+        
+        # Move report.html to test-results directory if it exists
+        if [ -f "report.html" ]; then
+          mv report.html test-results/
+          echo "📊 Moved report.html to test-results/"
+        fi
         
         # Generate summary
         if [ $TEST_EXIT_CODE -eq 0 ]; then
