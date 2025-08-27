@@ -17,51 +17,81 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+        cache-dependency-path: 'requirements.txt'
 
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: pip-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('**/requirements.txt') }}-${{ inputs.cache-key-suffix }}
-        restore-keys: |
-          pip-${{ runner.os }}-${{ inputs.python-version }}-
-          pip-${{ runner.os }}-
-
-    - name: Install Python dependencies
+    - name: Get requirements hash
       shell: bash
+      id: requirements-hash
       run: |
+        REQUIREMENTS_HASH=$(sha256sum requirements.txt | cut -d' ' -f1 | head -c 8)
+        echo "hash=$REQUIREMENTS_HASH" >> $GITHUB_OUTPUT
+        echo "Requirements hash: $REQUIREMENTS_HASH"
+
+    - name: Cache Python virtual environment
+      uses: actions/cache@v4
+      id: venv-cache
+      with:
+        path: |
+          ~/.cache/pip
+          venv/
+        key: venv-${{ runner.os }}-python${{ inputs.python-version }}-${{ steps.requirements-hash.outputs.hash }}
+        restore-keys: |
+          venv-${{ runner.os }}-python${{ inputs.python-version }}-
+
+    - name: Create virtual environment and install dependencies
+      shell: bash
+      if: steps.venv-cache.outputs.cache-hit != 'true'
+      run: |
+        echo "📦 Creating virtual environment and installing dependencies..."
+        python -m venv venv
+        source venv/bin/activate
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        echo "VIRTUAL_ENV=$(pwd)/venv" >> $GITHUB_ENV
+        echo "$(pwd)/venv/bin" >> $GITHUB_PATH
+        echo "✅ Dependencies installed"
+
+    - name: Activate cached virtual environment
+      shell: bash
+      if: steps.venv-cache.outputs.cache-hit == 'true'
+      run: |
+        echo "♻️ Using cached virtual environment"
+        echo "VIRTUAL_ENV=$(pwd)/venv" >> $GITHUB_ENV
+        echo "$(pwd)/venv/bin" >> $GITHUB_PATH
 
     - name: Get Playwright version
       shell: bash
       id: playwright-version
       run: |
+        # Use the activated virtual environment
         PLAYWRIGHT_VERSION=$(pip show playwright | grep Version | cut -d' ' -f2 || echo "unknown")
         echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
-        echo "Playwright version: $PLAYWRIGHT_VERSION"
+        echo "🎭 Playwright version: $PLAYWRIGHT_VERSION"
 
     - name: Cache Playwright browsers
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: playwright-cache
       with:
         path: |
           ~/.cache/ms-playwright
-          ~/Library/Caches/ms-playwright
-          %USERPROFILE%\AppData\Local\ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-v2
+        key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-all-v3
         restore-keys: |
-          playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-
-          playwright-${{ runner.os }}-
+          playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-
+          playwright-browsers-${{ runner.os }}-
 
     - name: Install Playwright browsers
       shell: bash
       if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: |
-        echo "Installing Playwright browsers..."
+        echo "🎭 Installing Playwright browsers (this may take a few minutes)..."
         playwright install chromium firefox webkit --with-deps
+        echo "✅ Playwright browsers installed"
 
-    - name: Install Playwright system dependencies
+    - name: Install Playwright system dependencies only
       shell: bash
       if: steps.playwright-cache.outputs.cache-hit == 'true'
-      run: playwright install-deps
+      run: |
+        echo "♻️ Using cached Playwright browsers"
+        playwright install-deps
+        echo "✅ Playwright system dependencies updated"

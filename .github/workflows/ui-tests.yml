@@ -69,10 +69,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup test environment
-        uses: ./.github/actions/setup-environment
+        uses: ./.github/actions/setup-environment-fast
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache-key-suffix: ${{ github.run_id }}
 
       - name: Run UI tests
         id: run-tests

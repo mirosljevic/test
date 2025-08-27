@@ -1,0 +1,98 @@
+name: 'Docker-based Fast Setup'
+description: 'Ultra-fast setup using pre-built Docker image with all dependencies'
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: docker-buildx-${{ runner.os }}-${{ hashFiles('requirements.txt', 'Dockerfile') }}
+        restore-keys: |
+          docker-buildx-${{ runner.os }}-
+
+    - name: Create optimized Dockerfile
+      shell: bash
+      run: |
+        cat > Dockerfile.ci << 'EOF'
+        FROM python:3.11-slim as base
+        
+        # Install system dependencies
+        RUN apt-get update && apt-get install -y \
+            wget gnupg ca-certificates procps xvfb \
+            libnss3-dev libatk-bridge2.0-dev libdrm-dev libxkbcommon-dev \
+            libgtk-3-dev libgbm-dev libasound2-dev \
+            && rm -rf /var/lib/apt/lists/*
+        
+        # Copy and install Python dependencies  
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+        
+        # Install Playwright browsers
+        RUN playwright install chromium firefox webkit --with-deps
+        
+        # Set environment variables
+        ENV PYTHONPATH=/workspace
+        ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+        
+        WORKDIR /workspace
+        EOF
+
+    - name: Build and cache Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: Dockerfile.ci
+        push: false
+        load: true
+        tags: pytest-env:latest
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+    - name: Move cache
+      shell: bash
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+    - name: Setup container environment
+      shell: bash
+      run: |
+        # Create a reusable container
+        docker create --name pytest-env \
+          -v ${{ github.workspace }}:/workspace \
+          -v /tmp/test-results:/workspace/test-results \
+          -w /workspace \
+          pytest-env:latest tail -f /dev/null
+        
+        docker start pytest-env
+        
+        # Create wrapper scripts
+        cat > /tmp/pytest << 'EOF'
+        #!/bin/bash
+        docker exec pytest-env pytest "$@"
+        EOF
+        
+        cat > /tmp/python << 'EOF'
+        #!/bin/bash
+        docker exec pytest-env python "$@"
+        EOF
+        
+        cat > /tmp/pip << 'EOF'
+        #!/bin/bash
+        docker exec pytest-env pip "$@"
+        EOF
+        
+        chmod +x /tmp/pytest /tmp/python /tmp/pip
+        echo "/tmp" >> $GITHUB_PATH
+        
+        echo "✅ Docker environment ready"

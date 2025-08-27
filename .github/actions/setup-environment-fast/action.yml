@@ -1,0 +1,121 @@
+name: 'Fast Test Environment Setup'
+description: 'Ultra-fast setup with aggressive caching and parallel installation'
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python with built-in caching
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+        cache-dependency-path: 'requirements.txt'
+
+    - name: Get cache keys
+      shell: bash
+      id: cache-keys
+      run: |
+        REQUIREMENTS_HASH=$(sha256sum requirements.txt | cut -d' ' -f1 | head -c 12)
+        echo "requirements-hash=$REQUIREMENTS_HASH" >> $GITHUB_OUTPUT
+        
+        # Get Python version for more specific caching
+        PYTHON_EXACT=$(python --version | sed 's/Python //')
+        echo "python-exact=$PYTHON_EXACT" >> $GITHUB_OUTPUT
+        
+        echo "📋 Cache keys - Requirements: $REQUIREMENTS_HASH, Python: $PYTHON_EXACT"
+
+    - name: Cache complete Python environment
+      uses: actions/cache@v4
+      id: complete-cache
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.local/lib/python${{ inputs.python-version }}/site-packages
+          ~/.local/bin
+          ~/.cache/ms-playwright
+        key: complete-env-${{ runner.os }}-py${{ steps.cache-keys.outputs.python-exact }}-${{ steps.cache-keys.outputs.requirements-hash }}-v4
+        restore-keys: |
+          complete-env-${{ runner.os }}-py${{ steps.cache-keys.outputs.python-exact }}-
+          complete-env-${{ runner.os }}-py${{ inputs.python-version }}-
+
+    - name: Fast install dependencies
+      shell: bash
+      if: steps.complete-cache.outputs.cache-hit != 'true'
+      run: |
+        echo "🚀 Fast installing Python dependencies..."
+        python -m pip install --upgrade pip setuptools wheel
+        pip install --user -r requirements.txt
+        echo "✅ Dependencies installed to user site-packages"
+
+    - name: Verify cached environment
+      shell: bash
+      if: steps.complete-cache.outputs.cache-hit == 'true'
+      run: |
+        echo "⚡ Using cached complete environment"
+        # Add user site-packages to PATH
+        echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
+        
+        # Verify key packages are available
+        python -c "import pytest, playwright; print(f'✅ pytest {pytest.__version__}, playwright available')"
+
+    - name: Setup PATH for new installation
+      shell: bash
+      if: steps.complete-cache.outputs.cache-hit != 'true'
+      run: |
+        # Add user site-packages to PATH
+        echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
+
+    - name: Get Playwright version fast
+      shell: bash
+      id: playwright-version
+      run: |
+        PLAYWRIGHT_VERSION=$(python -c "import pkg_resources; print(pkg_resources.get_distribution('playwright').version)" 2>/dev/null || echo "unknown")
+        echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+        echo "🎭 Playwright version: $PLAYWRIGHT_VERSION"
+
+    - name: Install Playwright browsers (parallel)
+      shell: bash
+      if: steps.complete-cache.outputs.cache-hit != 'true'
+      run: |
+        echo "🎭 Installing Playwright browsers in parallel..."
+        # Install browsers in parallel for speed
+        playwright install chromium &
+        PID_CHROMIUM=$!
+        playwright install firefox &
+        PID_FIREFOX=$!
+        playwright install webkit &
+        PID_WEBKIT=$!
+        
+        # Wait for all installations
+        wait $PID_CHROMIUM
+        wait $PID_FIREFOX  
+        wait $PID_WEBKIT
+        
+        # Install system dependencies
+        playwright install-deps
+        echo "✅ All Playwright browsers installed in parallel"
+
+    - name: Quick system deps update for cached browsers
+      shell: bash
+      if: steps.complete-cache.outputs.cache-hit == 'true'
+      run: |
+        echo "⚡ Updating system dependencies for cached browsers..."
+        playwright install-deps chromium firefox webkit
+        echo "✅ System dependencies updated"
+
+    - name: Environment verification
+      shell: bash
+      run: |
+        echo "🔍 Verifying environment setup..."
+        echo "Python: $(python --version)"
+        echo "Pip: $(pip --version)"
+        echo "Pytest: $(pytest --version)"
+        echo "Playwright: $(playwright --version 2>/dev/null || echo 'playwright command not found, using python module')"
+        echo "Available browsers:"
+        ls -la ~/.cache/ms-playwright/ 2>/dev/null || echo "Browser cache not found"
+        echo "✅ Environment verification complete"
