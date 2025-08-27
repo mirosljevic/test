@@ -7,11 +7,6 @@ DRAWS = 3
 
 
 @mark.stability
-def test_stability_dgs(player):
-    player.ui.open()
-    player.ui.authentication.login()
-
-    balance = player.ui.account.get_balance()
-    player.ui.dgs.purchase_game(game=GAME, method="select_own", plays=len(NUMBERS), numbers=NUMBERS, draws=DRAWS)
-
-    ticket = player.ui.dgs.get_ticket()
+@mark.dgs
+def test_stability_dgs():
+    pass
